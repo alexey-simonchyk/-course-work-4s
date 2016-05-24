@@ -1,4 +1,4 @@
-import View.Window;
+import view.Window;
 
 public class Main {
 

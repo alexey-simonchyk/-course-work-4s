@@ -1,4 +1,4 @@
-package Model;
+package model;
 
 public class Card {
     private int suit; // масть
@@ -10,8 +10,4 @@ public class Card {
     public int getSuit() { return suit; }
 
     public int getValue() { return value; }
-
-    public void setValue(int value) { this.value = value; }
-
-    public void setSuit(int suit) { this.suit = suit; }
 }
