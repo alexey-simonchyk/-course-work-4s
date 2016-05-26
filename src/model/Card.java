@@ -10,4 +10,8 @@ public class Card {
     public int getSuit() { return suit; }
 
     public int getValue() { return value; }
+
+    public Card getClone() {
+        return new Card(suit, value);
+    }
 }

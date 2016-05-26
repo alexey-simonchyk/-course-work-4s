@@ -2,13 +2,15 @@ package view;
 
 
 import controller.Controller;
-import model.Card;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
@@ -17,6 +19,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import model.Card;
 import model.server.ServerPlayer;
 
 import java.util.ArrayList;
@@ -29,13 +32,12 @@ public class Window extends Application {
     private HBox playerCards, firstEnemy;
     private VBox deck, secondEnemy, tableCards;
     private Controller controller;
+    private Stage stage;
 
     public Window() {
         cards = loadImage("cards.png");
         cardBack = loadImage("card_back.png");
     }
-
-    public void setController(Controller controller) { this.controller = controller; }
 
     public static void applicationBegin(String[] args) {
         launch(args);
@@ -44,6 +46,92 @@ public class Window extends Application {
     @Override
     public void start(Stage stage) {
         stage.setTitle("Fool online");
+        this.stage = stage;
+
+        setMainMenuScene();
+        stage.show();
+        controller = new Controller(this);
+    }
+
+    private void setClientScene() {
+        VBox serverScene = getVBox(50);
+        Scene scene = new Scene(serverScene, 640, 480);
+        Label ipLabel = new Label("Write ip server");
+        TextField ipTextField = new TextField();
+        Label portLabel = new Label("Write port to connect");
+        TextField portTextField = new TextField();
+        Button buttonConnect = new Button("Connect");
+        serverScene.getChildren().addAll(ipLabel, ipTextField, portLabel, portTextField, buttonConnect);
+        stage.setScene(scene);
+        controller.setIsServer(false);
+
+        buttonConnect.setOnAction(event -> {
+            String ip = ipTextField.getText();
+            String port = portTextField.getText();
+            if (!ip.equals("") && !port.equals("")) {
+                Label labelMessage = new Label("Connecting...");
+                serverScene.getChildren().add(labelMessage);
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        controller.connectToServer(ip, Integer.parseInt(port));
+                    }
+                }).start();
+            }
+        });
+    }
+
+    public void startGame() {
+        Platform.runLater(() -> {
+            setGameScene();
+            controller.start();
+        });
+    }
+
+
+    private void setServerScene() {
+        VBox serverScene = getVBox(50);
+        Scene scene = new Scene(serverScene, 640, 480);
+        Label labelMessage = new Label("Waiting players...");
+        serverScene.getChildren().add(labelMessage);
+        stage.setScene(scene);
+        controller.setIsServer(true);
+        new Thread(new Runnable(){
+            @Override
+            public void run() {
+                controller.playerWait();
+            }
+        }).start();
+    }
+
+    public void setMainMenuScene() {
+        VBox mainMenu = getVBox(50);
+        Scene scene = new Scene(mainMenu, 640, 480);
+        Button startButton = getButton("Start server");
+        Button connectButton = getButton("Connect");
+        Button exitButton = getButton("Exit");
+        mainMenu.getChildren().add(startButton);
+        mainMenu.getChildren().add(connectButton);
+        mainMenu.getChildren().add(exitButton);
+
+        startButton.setOnAction(event->{
+                //controller.setInMainMenu(false);
+                setServerScene();
+        });
+
+        connectButton.setOnAction(event-> setClientScene());
+
+        stage.setScene(scene);
+    }
+
+    private Button getButton(String name) {
+        Button button = new Button(name);
+        button.setMinWidth(150);
+        button.setMinHeight(50);
+        return button;
+    }
+
+    public void setGameScene() {
         playerCards = new HBox();
         tableCards = new VBox();
         deck = new VBox();
@@ -79,14 +167,12 @@ public class Window extends Application {
         secondEnemy.setMinWidth(CARD_HEIGHT);
 
         stage.setScene(scene);
-        stage.show();
-        new Controller(this);
     }
 
-    public void update(ArrayList<Card> gameCards, ArrayList<Card> playerCards, ArrayList<ServerPlayer> enemies) { // обновление отображения карт на столе
+    public void update(ArrayList<Card> gameCards, ArrayList<Card> playerCards, ArrayList<ServerPlayer> enemies, Card trump) { // обновление отображения карт на столе
         displayCardsPlayer(playerCards, this.playerCards);
         displayCardsTable(gameCards, tableCards);
-        displayCardDeck(new Card(1, 1), deck);
+        displayCardDeck(trump, deck);
         int temp = enemies.get(0).getNumberCards();
         displayEnemyCards(firstEnemy, temp, 0);
         firstEnemy.setSpacing(10 + ( -10 * ( temp / 3 ) ));
@@ -127,6 +213,13 @@ public class Window extends Application {
 
     private HBox getHBox(int spacing) {
         HBox result = new HBox();
+        result.setSpacing(spacing);
+        result.setAlignment(Pos.CENTER);
+        return result;
+    }
+
+    private VBox getVBox(int spacing) {
+        VBox result = new VBox();
         result.setSpacing(spacing);
         result.setAlignment(Pos.CENTER);
         return result;
@@ -181,6 +274,7 @@ public class Window extends Application {
     private Rectangle2D getCardSprite(Card card) {
         return new Rectangle2D(4 + ( 3 + CARD_WIDTH ) * card.getValue(), 3 + ( 3 + CARD_HEIGHT ) * card.getSuit(), CARD_WIDTH, CARD_HEIGHT);
     }
+
     private Image loadImage(String path) {
         return new Image(getClass().getResourceAsStream(path));
     }

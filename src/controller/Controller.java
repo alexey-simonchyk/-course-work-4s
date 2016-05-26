@@ -1,63 +1,91 @@
 package controller;
 
 import model.Card;
-import model.Game;
 import model.client.Client;
 import model.server.Server;
-import model.server.ServerPlayer;
 import view.Window;
 
-public class Controller extends Thread{
-    private Game game;
+public class Controller {
     private Window window;
     private Client client;
     private boolean isServer;
     private Server server;
+    private boolean isInMainMenu;
 
     public Controller(Window window) {
-        isServer = true;
-        client = new Client();
+        isServer = false;
         this.window = window;
-        this.window.setController(this);
-        server = new Server();
-        server.addPlayer(client.getPlayer());
-        server.addPlayer(new ServerPlayer("Ger"));
-        server.setPlayers();
-        start();
+        isInMainMenu = false;
+    }
+
+    public void connectToServer(String ip, int port) {
+        client.connect(ip, port);
+        window.startGame();
+    }
+
+    public void setIsServer(boolean isServer) {
+        if (isServer) {
+            client = new Client("Server");
+            server = new Server();
+        } else {
+            server = null;
+            client = new Client("Client");
+        }
+        this.isServer = isServer;
+    }
+
+    public void playerWait() {
+        server.startGame();
+        client.getPlayer().setId(0);
+        server.getGame().addPlayer(client.getPlayer());
+        client.setGame(server.getGame());
+        server.waitPlayers(client.getPlayer().getName());
+        client.getPlayer().update(server.getDeck().getCards(6));
+        window.startGame();
+    }
+
+    public void setInMainMenu(boolean isInMainMenu) {
+        if (isInMainMenu) {
+            window.setMainMenuScene();
+        } else {
+            window.setGameScene();
+        }
+        this.isInMainMenu = isInMainMenu;
     }
 
     public void update() {
-        game = server.getGame();
-        window.update(game.getCardsOnTable(), client.getPlayerCards(),
-                server.getPlayers(client.getPlayer().getId()));
+        window.update(client.getGame().getCardsOnTable(), client.getPlayer().getCards(),
+                server.getGame().getPlayers(client.getPlayer().getId()), /*client.getGame().getTrump()*/new Card(1, 1));
     }
 
     public void move(Card card) {
-        if (game.needReturnMove()) {
-            if (client.checkReturnMove(game.getLastCard(), card, game.getTrump())) {
+        if (client.getGame().needReturnMove()) {
+            if (client.checkReturnMove(client.getGame().getLastTableCard(), card, client.getGame().getTrump())) {
                 if (isServer) {
                     server.update(card, client.getPlayer().getId());
                     client.getPlayer().removeCard(card);
                     update();
                 } else {
-                    //отправка данных
+//                    отправка данных
                 }
+
             }
         } else {
-
+            // ход
         }
     }
 
-    @Override
-    public void run() {
-        if (isServer) {
-            game = server.getGame();
-            client.update();
-            server.update(null, client.getPlayer().getId());
-        } else {
-            // отправка данных
+    public void start() {
+        if (!isInMainMenu) {
+            if (isServer) {
+                server.update(null, client.getPlayer().getId());
+            } else {
+
+                // отправка данных
+            }
+            window.update(client.getGame().getCardsOnTable(), client.getPlayer().getCards(),
+                    client.getGame().getPlayers(client.getPlayer().getId()), /*client.getGame().getTrump()*/new Card(1, 1));
+
         }
-        window.update(game.getCardsOnTable(), client.getPlayerCards(),
-                server.getPlayers(client.getPlayer().getId()));
     }
 }

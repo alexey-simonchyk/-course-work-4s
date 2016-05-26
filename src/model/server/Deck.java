@@ -1,0 +1,32 @@
+package model.server;
+
+import model.Card;
+
+import java.util.ArrayList;
+import java.util.Collections;
+
+public class Deck {
+    private ArrayList<Card> cards;
+    public Deck() {
+        cards = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 13; j++) {
+                cards.add(new Card(i, j));
+            }
+        }
+        Collections.shuffle(cards);
+    }
+
+    public ArrayList<Card> getCards(int number) {
+        ArrayList<Card> temp = new ArrayList<>();
+        for (int i = 0; i < number; i++) {
+            temp.add(cards.get(cards.size() - 1));
+            cards.remove(cards.size() - 1);
+        }
+        return temp;
+    }
+
+    public Card getTrump () {
+        return cards.get(0);
+    }
+}
