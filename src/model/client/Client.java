@@ -1,5 +1,6 @@
 package model.client;
 
+import controller.Controller;
 import model.Card;
 import model.Game;
 import model.Player;
@@ -9,14 +10,55 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
 
-public class Client {
-    private Player player;
-    private Game game;
+public class Client extends Thread {
+    private volatile Player player;
+    private volatile Game game;
+    private volatile Controller controller;
+
+    public Client(String name, Controller controller) {
+        player = new Player(name);
+        this.controller = controller;
+        ArrayList<Card> playerCards = new ArrayList<>();
+        player.update(playerCards);
+    }
 
     public Client(String name) {
         player = new Player(name);
         ArrayList<Card> playerCards = new ArrayList<>();
         player.update(playerCards);
+    }
+
+    @Override
+    public void run() {
+        while (true) {
+            byte[] dataReceived = receiveData();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    if ( checkReceivedData(dataReceived)) {
+                        controller.update();
+                        currentThread().interrupt();
+                    }
+                }
+            }).start();
+        }
+    }
+
+    private boolean checkReceivedData(byte[] data) {
+        if (data == null) {
+            return false;
+        }
+        if (data[0] == 1) {
+            update(new Card(data[2], data[3]) , data[1]);
+        }
+        return true;
+    }
+
+    public void update(Card card, int id) {
+        if (card != null) {
+            game.updateTable(card);
+            game.playerMove(id);
+        }
     }
 
     public boolean checkReturnMove(Card onTableCard, Card selectedCard, Card trump) {
@@ -44,9 +86,13 @@ public class Client {
         }
     }
 
-    private byte[] receiveData() throws IOException {
+    private byte[] receiveData() {
         byte[] data = new byte[1024];
-        player.getInputStream().read(data);
+        try {
+            player.getInputStream().read(data);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return data;
     }
 
@@ -63,9 +109,9 @@ public class Client {
         int length = 4;
         byte[] sendData = new byte[length];
         sendData[0] = 1;
-        sendData[2] = id;
-        sendData[3] = (byte)card.getSuit();
-        sendData[4] = (byte)card.getValue();
+        sendData[1] = id;
+        sendData[2] = (byte)card.getSuit();
+        sendData[3] = (byte)card.getValue();
         return sendData;
     }
 
@@ -84,9 +130,9 @@ public class Client {
     public void setGame(Game game) { this.game = game; }
 
     private void handleStartGame(byte[] receivedData) {
-        int offset = 4;
+        int offset = 5;
         if (receivedData[0] == 0) {
-            player.setId(receivedData[1]);
+            player.setId((byte)1);
             byte[] name = new byte[receivedData[2]];
             System.arraycopy(receivedData, offset, name, 0, receivedData[2]);
             game.addPlayer(new ServerPlayer(new String(name), 0));
@@ -95,8 +141,15 @@ public class Client {
             byte[] cards = new byte[receivedData[3]];
             System.arraycopy(receivedData, offset, cards, 0, receivedData[3]);
             player.addCards(cards);
-
+            offset += receivedData[3];
+            game.setTrump(new Card(receivedData[offset], receivedData[++offset]));
+            player.setQueueMove(receivedData[4] == 1);
         }
+    }
+
+    public void sendUpdate(Card card) {
+        byte[] sendData = getMoveArrayData(player.getId(), card);
+        sendData(sendData);
     }
 
     public void connect(String ip, int port) {

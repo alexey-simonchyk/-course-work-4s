@@ -14,25 +14,13 @@ public class Game {
 
     public Game() {
         this.cardsOnTable = new ArrayList<>();
-        cardsOnTable.add(new Card(0, 1));
-        cardsOnTable.add(new Card(0, 2));
-        /*cardsOnTable.add(new Card(1, 10));
-        cardsOnTable.add(new Card(3, 9));
-        cardsOnTable.add(new Card(2, 11));
-        cardsOnTable.add(new Card(1, 8));
-        cardsOnTable.add(new Card(0, 1));
-        cardsOnTable.add(new Card(0, 2));
-        cardsOnTable.add(new Card(1, 10));
-        cardsOnTable.add(new Card(3, 9));
-        cardsOnTable.add(new Card(0, 4));
-        this.cardsOnTable = cardsOnTable;*/
         isEnd = true;
         players = new ArrayList<>();
     }
 
     public void addPlayer(ServerPlayer player) {
         players.add(player);
-        player.setId(players.size());
+        player.setId((byte)(players.size() - 1));
     }
 
     public void playerMove(int id) {

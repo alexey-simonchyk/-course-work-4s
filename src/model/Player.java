@@ -9,7 +9,6 @@ import java.net.Socket;
 import java.util.ArrayList;
 
 public class Player extends ServerPlayer {
-
     private ArrayList<Card> cards;// список карт игрока
 
     public Player(String name) {

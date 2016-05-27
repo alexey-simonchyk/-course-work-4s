@@ -37,20 +37,23 @@ public class SocketServer {
         }
     }
 
-    public static byte[] getArrayStartData(byte id, String name, ArrayList<Card> cards) { // флаг, ид , длина имени, количестов карт * 2
+    public static byte[] getArrayStartData(byte id, String name, ArrayList<Card> cards, Card trumpCard, boolean queueMove) { // флаг, ид , длина имени, количестов карт * 2
         byte[] nameArray = name.getBytes();
-        int length = 4 + nameArray.length + cards.size() * 2;
+        int length = 4 + nameArray.length + cards.size() * 2 + 3;
         byte[] sendData = new byte[length];
         sendData[0] = 0;
         sendData[1] = id;
         sendData[2] = (byte)nameArray.length;
         sendData[3] = (byte)(cards.size() * 2);
-        System.arraycopy(nameArray, 0, sendData, 4, nameArray.length);
-        int counter = 4 + nameArray.length;
+        sendData[4] = queueMove ? (byte)1 : (byte)0;
+        System.arraycopy(nameArray, 0, sendData, 5, nameArray.length);
+        int counter = 5 + nameArray.length;
         for (Card temp: cards) {
             sendData[counter++] = (byte)temp.getSuit();
             sendData[counter++] = (byte)temp.getValue();
         }
+        sendData[counter++] = (byte)trumpCard.getSuit();
+        sendData[counter] = (byte)trumpCard.getValue();
         return sendData;
     }
 

@@ -242,13 +242,18 @@ public class Window extends Application {
             int numberCards = 0;
             for ( Card card : cardsList ) {
                 numberCards++;
-                ImageViewCard view = new ImageViewCard(cards, card);
+                ImageViewCard view = new ImageViewCard(cards, card.getClone());
                 view.setViewport(getCardSprite(card));
                 if (node == playerCards)
                     view.setOnMouseClicked(new EventHandler<MouseEvent>() {
                         @Override
                         public void handle(MouseEvent event) {
-                            controller.move(view.getCard());
+                            new Thread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    controller.move(view.getCard().getClone());
+                                }
+                            }).start();
                             //tableCards.getChildren().add(view);
                         }
                     });

@@ -21,27 +21,30 @@ public class Controller {
     public void connectToServer(String ip, int port) {
         client.connect(ip, port);
         window.startGame();
+        client.start();
     }
 
     public void setIsServer(boolean isServer) {
         if (isServer) {
             client = new Client("Server");
-            server = new Server();
+            server = new Server(this);
         } else {
             server = null;
-            client = new Client("Client");
+            client = new Client("Client", this);
         }
         this.isServer = isServer;
     }
 
     public void playerWait() {
         server.startGame();
-        client.getPlayer().setId(0);
+        client.getPlayer().setId((byte)0);
         server.getGame().addPlayer(client.getPlayer());
         client.setGame(server.getGame());
-        server.waitPlayers(client.getPlayer().getName());
+        client.getPlayer().setQueueMove(Math.round(Math.random()) == 1);
+        server.waitPlayers(client.getPlayer().getName(), !client.getPlayer().getQueueMove());
         client.getPlayer().update(server.getDeck().getCards(6));
         window.startGame();
+        server.start();
     }
 
     public void setInMainMenu(boolean isInMainMenu) {
@@ -55,23 +58,38 @@ public class Controller {
 
     public void update() {
         window.update(client.getGame().getCardsOnTable(), client.getPlayer().getCards(),
-                server.getGame().getPlayers(client.getPlayer().getId()), /*client.getGame().getTrump()*/new Card(1, 1));
+                client.getGame().getPlayers(client.getPlayer().getId()), client.getGame().getTrump());
     }
 
     public void move(Card card) {
-        if (client.getGame().needReturnMove()) {
-            if (client.checkReturnMove(client.getGame().getLastTableCard(), card, client.getGame().getTrump())) {
+        if (client.getPlayer().getQueueMove()) {
+            if (client.getGame().needReturnMove()) {
+                if (client.checkReturnMove(client.getGame().getLastTableCard(), card, client.getGame().getTrump())) {
+                    if (isServer) {
+                        server.update(card, client.getPlayer().getId());
+                        client.getPlayer().removeCard(card);
+                        update();
+                    } else {
+    //                    отправка данных
+                    }
+
+                }
+            } else {
                 if (isServer) {
                     server.update(card, client.getPlayer().getId());
                     client.getPlayer().removeCard(card);
                     update();
                 } else {
-//                    отправка данных
+                    client.getPlayer().removeCard(card);
+                    if (card != null) {
+                        client.getGame().updateTable(card);
+                        update();
+                    }
                 }
-
+                        client.sendUpdate(card);
+                        System.out.println("Here");
+                // ход
             }
-        } else {
-            // ход
         }
     }
 
@@ -84,7 +102,7 @@ public class Controller {
                 // отправка данных
             }
             window.update(client.getGame().getCardsOnTable(), client.getPlayer().getCards(),
-                    client.getGame().getPlayers(client.getPlayer().getId()), /*client.getGame().getTrump()*/new Card(1, 1));
+                    client.getGame().getPlayers(client.getPlayer().getId()), client.getGame().getTrump());
 
         }
     }
