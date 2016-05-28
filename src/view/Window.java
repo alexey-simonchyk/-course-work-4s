@@ -4,16 +4,15 @@ package view;
 import controller.Controller;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.event.EventHandler;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -30,7 +29,8 @@ public class Window extends Application {
     private Image cards; // Крестя - 2 , Пика - 3 , Бубна - 1 , Чирва - 0
     private Image cardBack; // колода карт
     private HBox playerCards, firstEnemy;
-    private VBox deck, secondEnemy, tableCards;
+    private VBox deck;
+    private VBox tableCards;
     private Controller controller;
     private Stage stage;
 
@@ -51,15 +51,18 @@ public class Window extends Application {
         setMainMenuScene();
         stage.show();
         controller = new Controller(this);
+        stage.setOnCloseRequest(event -> controller.stopThreads());
     }
 
     private void setClientScene() {
         VBox serverScene = getVBox(50);
-        Scene scene = new Scene(serverScene, 640, 480);
+        Scene scene = new Scene(serverScene, 800, 600);
         Label ipLabel = new Label("Write ip server");
         TextField ipTextField = new TextField();
         Label portLabel = new Label("Write port to connect");
         TextField portTextField = new TextField();
+        portTextField.setText("7070");
+        ipTextField.setText("127.0.0.1");
         Button buttonConnect = new Button("Connect");
         serverScene.getChildren().addAll(ipLabel, ipTextField, portLabel, portTextField, buttonConnect);
         stage.setScene(scene);
@@ -84,14 +87,15 @@ public class Window extends Application {
     public void startGame() {
         Platform.runLater(() -> {
             setGameScene();
-            controller.start();
+            controller.setInMainMenu(false);
+            controller.updateView();
         });
     }
 
 
     private void setServerScene() {
         VBox serverScene = getVBox(50);
-        Scene scene = new Scene(serverScene, 640, 480);
+        Scene scene = new Scene(serverScene, 800, 600);
         Label labelMessage = new Label("Waiting players...");
         serverScene.getChildren().add(labelMessage);
         stage.setScene(scene);
@@ -104,9 +108,9 @@ public class Window extends Application {
         }).start();
     }
 
-    public void setMainMenuScene() {
+    private void setMainMenuScene() {
         VBox mainMenu = getVBox(50);
-        Scene scene = new Scene(mainMenu, 640, 480);
+        Scene scene = new Scene(mainMenu, 800, 600);
         Button startButton = getButton("Start server");
         Button connectButton = getButton("Connect");
         Button exitButton = getButton("Exit");
@@ -115,7 +119,6 @@ public class Window extends Application {
         mainMenu.getChildren().add(exitButton);
 
         startButton.setOnAction(event->{
-                //controller.setInMainMenu(false);
                 setServerScene();
         });
 
@@ -126,21 +129,21 @@ public class Window extends Application {
 
     private Button getButton(String name) {
         Button button = new Button(name);
-        button.setMinWidth(150);
+        button.setMinWidth(250);
         button.setMinHeight(50);
         return button;
     }
 
-    public void setGameScene() {
+    private void setGameScene() {
         playerCards = new HBox();
         tableCards = new VBox();
         deck = new VBox();
         firstEnemy = new HBox();
-        secondEnemy = new VBox();
+        VBox controlArea = getControlArea(10);
 
         BorderPane borderPane = new BorderPane();
         borderPane.setStyle("-fx-background-image: url(\"background.jpg\");");
-        Scene scene = new Scene(borderPane, 640, 480);
+        Scene scene = new Scene(borderPane, 800, 600);
 
         //КОЛОДА КАРТ
         borderPane.setRight(deck);
@@ -162,24 +165,41 @@ public class Window extends Application {
         borderPane.setTop(firstEnemy);
         firstEnemy.setAlignment(Pos.CENTER);
 
-        borderPane.setLeft(secondEnemy);
-        secondEnemy.setAlignment(Pos.CENTER);
-        secondEnemy.setMinWidth(CARD_HEIGHT);
+        borderPane.setLeft(controlArea);
 
         stage.setScene(scene);
     }
 
-    public void update(ArrayList<Card> gameCards, ArrayList<Card> playerCards, ArrayList<ServerPlayer> enemies, Card trump) { // обновление отображения карт на столе
+    public void update(ArrayList<Card> gameCards, ArrayList<Card> playerCards,
+                       ArrayList<ServerPlayer> players, Card trump) { // обновление отображения карт на столе
         displayCardsPlayer(playerCards, this.playerCards);
         displayCardsTable(gameCards, tableCards);
         displayCardDeck(trump, deck);
-        int temp = enemies.get(0).getNumberCards();
+        int temp = players.get(0).getNumberCards();
         displayEnemyCards(firstEnemy, temp, 0);
         firstEnemy.setSpacing(10 + ( -10 * ( temp / 3 ) ));
-        if (enemies.size() == 2) {
-            displayEnemyCards(secondEnemy, enemies.get(0).getNumberCards(), 90);
-            secondEnemy.setSpacing( -8 * temp);
-        }
+
+    }
+
+    private VBox getControlArea(int spacing) {
+        VBox newControlArea = new VBox();
+        newControlArea.setSpacing(spacing);
+        newControlArea.setAlignment(Pos.CENTER);
+        Button buttonPass = getButton("Пасс");
+        Button buttonTake = getButton("Взять");
+        TextArea chat = new TextArea();
+        chat.setEditable(false);
+        chat.setPrefWidth(250);
+        chat.setPrefHeight(400);
+        HBox messageArea = getHBox(5);
+        messageArea.setPrefWidth(250);
+        TextField messageText = new TextField();
+        messageText.setPrefWidth(150);
+        Button buttonSendMessage = new Button("Отправить");
+        buttonSendMessage.setPrefWidth(95);
+        messageArea.getChildren().addAll(messageText, buttonSendMessage);
+        newControlArea.getChildren().addAll(buttonPass, buttonTake, chat, messageArea);
+        return newControlArea;
     }
 
     private void displayCardsTable(ArrayList<Card> cardsList, VBox node) { // отображение карт , которыми ходили
@@ -245,18 +265,12 @@ public class Window extends Application {
                 ImageViewCard view = new ImageViewCard(cards, card.getClone());
                 view.setViewport(getCardSprite(card));
                 if (node == playerCards)
-                    view.setOnMouseClicked(new EventHandler<MouseEvent>() {
+                    view.setOnMouseClicked(event -> new Thread(new Runnable() {
                         @Override
-                        public void handle(MouseEvent event) {
-                            new Thread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    controller.move(view.getCard().getClone());
-                                }
-                            }).start();
-                            //tableCards.getChildren().add(view);
+                        public void run() {
+                            controller.move(view.getCard().getClone());
                         }
-                    });
+                    }).start());
                 node.getChildren().add(view);
             }
             node.setSpacing(10 + ( -10 * ( numberCards / 3 ) ));

@@ -10,12 +10,12 @@ public class Controller {
     private Client client;
     private boolean isServer;
     private Server server;
-    private boolean isInMainMenu;
+    private volatile boolean isInMainMenu;
 
     public Controller(Window window) {
         isServer = false;
         this.window = window;
-        isInMainMenu = false;
+        isInMainMenu = true;
     }
 
     public void connectToServer(String ip, int port) {
@@ -41,69 +41,66 @@ public class Controller {
         server.getGame().addPlayer(client.getPlayer());
         client.setGame(server.getGame());
         client.getPlayer().setQueueMove(Math.round(Math.random()) == 1);
-        server.waitPlayers(client.getPlayer().getName(), !client.getPlayer().getQueueMove());
+        server.waitPlayers(client.getPlayer().getName(), client.getPlayer().getQueueMove());
         client.getPlayer().update(server.getDeck().getCards(6));
         window.startGame();
         server.start();
     }
 
     public void setInMainMenu(boolean isInMainMenu) {
-        if (isInMainMenu) {
-            window.setMainMenuScene();
-        } else {
-            window.setGameScene();
-        }
         this.isInMainMenu = isInMainMenu;
     }
 
-    public void update() {
-        window.update(client.getGame().getCardsOnTable(), client.getPlayer().getCards(),
-                client.getGame().getPlayers(client.getPlayer().getId()), client.getGame().getTrump());
+    public void setQueueMove(boolean temp) {
+        client.getPlayer().setQueueMove(temp);
+    }
+
+    public void updateView() {
+        if (!isInMainMenu) {
+            window.update(client.getGame().getCardsOnTable(), client.getPlayer().getCards(),
+                    client.getGame().getPlayers(client.getPlayer().getId()), client.getGame().getTrump());
+        }
+    }
+
+    public void stopThreads() {
+        if (isServer) {
+            server.setIsStop();
+        } else {
+            client.setIsStop();
+        }
     }
 
     public void move(Card card) {
-        if (client.getPlayer().getQueueMove()) {
-            if (client.getGame().needReturnMove()) {
+        if (client.getPlayer().getQueueMove() && card != null) {
+            if (client.getGame().needReturnMove()) { // ОТВЕТНЫЙ ХОД
                 if (client.checkReturnMove(client.getGame().getLastTableCard(), card, client.getGame().getTrump())) {
                     if (isServer) {
                         server.update(card, client.getPlayer().getId());
                         client.getPlayer().removeCard(card);
-                        update();
+                        updateView();
+                        server.sendUpdate(card, client.getPlayer().getId());
                     } else {
-    //                    отправка данных
-                    }
-
-                }
-            } else {
-                if (isServer) {
-                    server.update(card, client.getPlayer().getId());
-                    client.getPlayer().removeCard(card);
-                    update();
-                } else {
-                    client.getPlayer().removeCard(card);
-                    if (card != null) {
+                        client.getPlayer().removeCard(card);
                         client.getGame().updateTable(card);
-                        update();
+                        updateView();
+                        client.sendUpdate(card);
                     }
                 }
-                        client.sendUpdate(card);
-                        System.out.println("Here");
-                // ход
-            }
-        }
-    }
-
-    public void start() {
-        if (!isInMainMenu) {
-            if (isServer) {
-                server.update(null, client.getPlayer().getId());
             } else {
-
-                // отправка данных
+                if (client.getGame().checkMove(card.getValue())) { // ОБЫЧНЫЙ ХОД
+                    if (isServer) {
+                        server.update(card, client.getPlayer().getId());
+                        client.getPlayer().removeCard(card);
+                        updateView();
+                        server.sendUpdate(card, client.getPlayer().getId());
+                    } else {
+                        client.getPlayer().removeCard(card);
+                        client.getGame().updateTable(card);
+                        updateView();
+                        client.sendUpdate(card);
+                    }
+                }
             }
-            window.update(client.getGame().getCardsOnTable(), client.getPlayer().getCards(),
-                    client.getGame().getPlayers(client.getPlayer().getId()), client.getGame().getTrump());
-
         }
     }
 }

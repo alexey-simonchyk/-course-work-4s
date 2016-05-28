@@ -10,14 +10,14 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 
-public class SocketServer {
-    private static ServerSocket socket;
-    private static Socket playerSocket;
+class SocketServer {
+    private static volatile ServerSocket socket;
+    private static volatile Socket playerSocket;
     private static DataInputStream inputStream;
     private static DataOutputStream outputStream;
 
 
-    public static void setSocket() {
+    static void setSocket() {
         try {
             socket = new ServerSocket(7070, 0, InetAddress.getByName("localhost"));
         } catch (IOException e) {
@@ -25,8 +25,7 @@ public class SocketServer {
         }
     }
 
-    public static void waitPlayers() {
-        String name = null;
+    static void waitPlayers() {
         try {
             playerSocket = socket.accept();
             outputStream = new DataOutputStream(playerSocket.getOutputStream());
@@ -37,7 +36,7 @@ public class SocketServer {
         }
     }
 
-    public static byte[] getArrayStartData(byte id, String name, ArrayList<Card> cards, Card trumpCard, boolean queueMove) { // флаг, ид , длина имени, количестов карт * 2
+    static byte[] getArrayStartData(byte id, String name, ArrayList<Card> cards, Card trumpCard, boolean queueMove) { // флаг, ид , длина имени, количестов карт * 2
         byte[] nameArray = name.getBytes();
         int length = 4 + nameArray.length + cards.size() * 2 + 3;
         byte[] sendData = new byte[length];
@@ -57,19 +56,28 @@ public class SocketServer {
         return sendData;
     }
 
-    public static byte[] getArrayUpdateData(Card card, byte id) {
+    static byte[] getArrayUpdateData(Card card, byte id) {
         int length = 4;
         byte[] sendData = new byte[length];
         sendData[0] = 1;
         sendData[1] = id;
         sendData[2] = (byte)card.getSuit();
-        sendData[3] = (byte)card.getSuit();
+        sendData[3] = (byte)card.getValue();
         return sendData;
     }
 
-    public static Socket getPlayerSocket() { return playerSocket; }
+    static void closeSockets() {
+        try {
+            playerSocket.close();
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
-    public static void sendData(byte[] sendData) {
+    static Socket getPlayerSocket() { return playerSocket; }
+
+    static void sendData(byte[] sendData) {
         try {
             outputStream.write(sendData);
         } catch (IOException e) {
@@ -78,7 +86,7 @@ public class SocketServer {
     }
 
 
-    public static byte[] receiveData() {
+    static byte[] receiveData() {
         byte[] result = new byte[1024];
         try {
             inputStream.read(result);

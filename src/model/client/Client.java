@@ -15,6 +15,11 @@ public class Client extends Thread {
     private volatile Game game;
     private volatile Controller controller;
 
+    public void setIsStop() {
+        player.closeSocket();
+        this.stop();
+    }
+
     public Client(String name, Controller controller) {
         player = new Player(name);
         this.controller = controller;
@@ -32,23 +37,22 @@ public class Client extends Thread {
     public void run() {
         while (true) {
             byte[] dataReceived = receiveData();
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    if ( checkReceivedData(dataReceived)) {
-                        controller.update();
-                        currentThread().interrupt();
+            if (dataReceived != null) {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (checkReceivedData(dataReceived)) {
+                            controller.updateView();
+                        }
                     }
-                }
-            }).start();
+                }).start();
+            }
         }
     }
 
     private boolean checkReceivedData(byte[] data) {
-        if (data == null) {
-            return false;
-        }
         if (data[0] == 1) {
+            controller.setQueueMove(true);
             update(new Card(data[2], data[3]) , data[1]);
         }
         return true;
@@ -63,12 +67,13 @@ public class Client extends Thread {
 
     public boolean checkReturnMove(Card onTableCard, Card selectedCard, Card trump) {
         if (trump.getSuit() == onTableCard.getSuit()) {
-            if (trump.getSuit() == selectedCard.getSuit() && onTableCard.getValue() < selectedCard.getValue()) {
+            if (trump.getSuit() == selectedCard.getSuit() &&
+                    ( onTableCard.getValue() < selectedCard.getValue() || selectedCard.getValue() == 0 )) {
                 return true;
             }
         } else if (trump.getSuit() == selectedCard.getSuit()) {
             return true;
-        } else if (onTableCard.getValue() < selectedCard.getValue() &&
+        } else if (( onTableCard.getValue() < selectedCard.getValue() || selectedCard.getValue() == 0 ) &&
                    onTableCard.getSuit() == selectedCard.getSuit()) {
             return true;
         }
@@ -148,6 +153,7 @@ public class Client extends Thread {
     }
 
     public void sendUpdate(Card card) {
+        controller.setQueueMove(false);
         byte[] sendData = getMoveArrayData(player.getId(), card);
         sendData(sendData);
     }

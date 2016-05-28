@@ -6,7 +6,6 @@ import model.server.ServerPlayer;
 import java.util.ArrayList;
 
 public class Game {
-    private boolean isEnd;
     private ArrayList<Card> cardsOnTable; // колода
     private Card trump;
     private ArrayList<ServerPlayer> players;
@@ -14,7 +13,6 @@ public class Game {
 
     public Game() {
         this.cardsOnTable = new ArrayList<>();
-        isEnd = true;
         players = new ArrayList<>();
     }
 
@@ -23,8 +21,21 @@ public class Game {
         player.setId((byte)(players.size() - 1));
     }
 
+    public boolean checkMove(int cardValue) {
+        if (cardsOnTable.size() == 0) {
+            return true;
+        }
+        for (Card temp : cardsOnTable) {
+            if (temp.getValue() == cardValue) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void playerMove(int id) {
-        players.get(id - 1).setNumberCards(players.size() - 1);
+        players.get(id).setNumberCards(players.get(id).getNumberCards() - 1);
+        //players.get(id).setQueueMove(false);
     }
 
     public ArrayList<ServerPlayer> getPlayers(int id) {
@@ -37,7 +48,6 @@ public class Game {
         return temp;
     }
 
-    public boolean getEndGame() { return isEnd; }
 
     public boolean needReturnMove() {
         return cardsOnTable.size() % 2 == 1;
@@ -46,8 +56,6 @@ public class Game {
     public Card getLastTableCard() {
         return cardsOnTable.get(cardsOnTable.size() - 1);
     }
-
-    public void setEndGame(boolean isEnd) { this.isEnd = isEnd; }
 
     public void updateTable(Card cardAdd) {
         this.cardsOnTable.add(cardAdd);

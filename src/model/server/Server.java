@@ -10,6 +10,11 @@ public class Server extends Thread {
     private Deck deck;
     private Controller controller;
 
+    public void setIsStop() {
+        SocketServer.closeSockets();
+        this.stop();
+    }
+
     public Server(Controller controller) {
         this.controller = controller;
     }
@@ -19,10 +24,10 @@ public class Server extends Thread {
         SocketServer.waitPlayers();
         byte[] receivedData = SocketServer.receiveData();
         String name = getName(receivedData);
-        byte id = 1;//(byte)game.getNumberPlayers();
+        byte id = (byte)game.getNumberPlayers();
         deck = new Deck();
         game.setTrump(deck.getTrump().getClone());
-        byte[] sendData = SocketServer.getArrayStartData(id, hostName, deck.getCards(6), game.getTrump(), true);
+        byte[] sendData = SocketServer.getArrayStartData(id, hostName, deck.getCards(6), game.getTrump(), !queueMove);
         SocketServer.sendData(sendData);
         game.addPlayer(new ServerPlayer(name, SocketServer.getPlayerSocket(), id));
     }
@@ -50,24 +55,28 @@ public class Server extends Thread {
     public void run() {
         while (true) {
             byte[] dataReceived = SocketServer.receiveData();
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    if (checkReceivedData(dataReceived)) {
-                        controller.update();
-                        currentThread().interrupt();
+            if (dataReceived != null) {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (checkReceivedData(dataReceived)) {
+                            controller.updateView();
+                        }
                     }
-                }
-            }).start();
+                }).start();
+            }
         }
+    }
 
+    public void sendUpdate(Card card, byte id) {
+        controller.setQueueMove(false);
+        byte[] sendData = SocketServer.getArrayUpdateData(card, id);
+        SocketServer.sendData(sendData);
     }
 
     private boolean checkReceivedData(byte[] data) {
-        if (data == null) {
-            return false;
-        }
         if (data[0] == 1) {
+            controller.setQueueMove(true);
             update(new Card(data[2], data[3]) , data[1]);
         }
         return true;

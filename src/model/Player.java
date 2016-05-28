@@ -16,6 +16,14 @@ public class Player extends ServerPlayer {
         cards = new ArrayList<>();
     }
 
+    public void closeSocket() {
+        try {
+            socket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public ArrayList<Card> getCards() { return cards; }
 
     public void setSocket(Socket socket) {

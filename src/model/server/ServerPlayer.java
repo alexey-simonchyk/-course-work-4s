@@ -26,7 +26,7 @@ public class ServerPlayer {
 
     public DataInputStream getInputStream() { return inputStream; }
 
-    public ServerPlayer(String name, Socket socket, int id) {
+    ServerPlayer(String name, Socket socket, int id) {
         numberCards = 6;
         this.name = name;
         this.socket = socket;
