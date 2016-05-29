@@ -17,8 +17,8 @@ public class Server extends Thread {
     private volatile Player player;
 
     public void setIsStop() {
-        SocketServer.closeSockets();
         this.stop();
+        SocketServer.closeSockets();
     }
 
     public Server(Controller controller) {
@@ -33,6 +33,7 @@ public class Server extends Thread {
         byte id = (byte)game.getNumberPlayers();
         deck = new Deck();
         game.setTrump(deck.getTrump().getClone());
+        Card.setTrump(game.getTrump().getSuit());
         byte[] sendData = SocketServer.getArrayStartData(id, hostName, deck.getCards(6), game.getTrump(), !queueMove);
         SocketServer.sendData(sendData);
         game.addPlayer(new ServerPlayer(name, SocketServer.getPlayerSocket(), id));

@@ -20,12 +20,18 @@ public class Controller {
 
     public void connectToServer(String ip, int port) {
         client.connect(ip, port);
+        client.getPlayer().sortCards();
         window.startGame();
         client.start();
+        updateChatArea(client.getPlayer().getQueueMove() ? "Игра начата, ваш ход." : "Игра начата, первым ходит ваш противник.");
     }
 
     public void updateChatArea(String message, String name) {
         window.updateChat(name + " : " + message);
+    }
+
+    private void updateChatArea(String message) {
+        window.updateChat(message);
     }
 
     public void setIsServer(boolean isServer) {
@@ -47,8 +53,10 @@ public class Controller {
         client.getPlayer().setQueueMove(Math.round(Math.random()) == 1);
         server.waitPlayers(client.getPlayer().getName(), client.getPlayer().getQueueMove());
         client.getPlayer().update(server.getDeck().getCards(6));
+        client.getPlayer().sortCards();
         window.startGame();
         server.start();
+        updateChatArea(client.getPlayer().getQueueMove() ? "Игра начата, ваш ход." : "Игра начата, первым ходит ваш противник.");
     }
 
     public void setInMainMenu(boolean isInMainMenu) {

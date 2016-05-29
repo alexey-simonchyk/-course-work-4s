@@ -18,8 +18,8 @@ public class Client extends Thread {
     private volatile Controller controller;
 
     public void setIsStop() {
-        player.closeSocket();
         this.stop();
+        player.closeSocket();
     }
 
     public Client(String name, Controller controller) {
@@ -161,9 +161,10 @@ public class Client extends Thread {
             offset += receivedData[2];
             byte[] cards = new byte[receivedData[3]];
             System.arraycopy(receivedData, offset, cards, 0, receivedData[3]);
-            player.addCards(cards);
             offset += receivedData[3];
             game.setTrump(new Card(receivedData[offset], receivedData[++offset]));
+            Card.setTrump(game.getTrump().getSuit());
+            player.addCards(cards);
             player.setQueueMove(receivedData[4] == 1);
         }
     }

@@ -99,6 +99,8 @@ class SocketServer {
 
     static void closeSockets() {
         try {
+            inputStream.close();
+            outputStream.close();
             playerSocket.close();
             socket.close();
         } catch (IOException e) {

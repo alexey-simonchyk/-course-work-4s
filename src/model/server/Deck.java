@@ -24,6 +24,7 @@ public class Deck {
         }
         if (number > 0) {
             for (int i = 0; i < number; i++) {
+                cards.get(cards.size() - 1).checkTrumpCard();
                 temp.add(cards.get(cards.size() - 1));
                 cards.remove(cards.size() - 1);
             }

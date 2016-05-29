@@ -197,6 +197,7 @@ public class Window extends Application {
         chat.setPrefWidth(250);
         chat.setPrefHeight(400);
         HBox messageArea = getHBox(5);
+        chat.setWrapText(true);
         messageArea.setPrefWidth(250);
         TextField messageText = new TextField();
         messageText.setPrefWidth(150);

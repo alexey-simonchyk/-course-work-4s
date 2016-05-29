@@ -7,6 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Comparator;
 
 public class Player extends ServerPlayer {
     private ArrayList<Card> cards;// список карт игрока
@@ -18,6 +19,8 @@ public class Player extends ServerPlayer {
 
     public void closeSocket() {
         try {
+            inputStream.close();
+            outputStream.close();
             socket.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -55,6 +58,17 @@ public class Player extends ServerPlayer {
     public void addCards(byte[] cards) {
         for (int i = 0; i < cards.length - 1; i += 2) {
             this.cards.add(new Card(cards[i], cards[i + 1]));
+        }
+    }
+
+    public void sortCards() {
+        if (cards != null && cards.size() > 0) {
+            cards.sort(new Comparator<Card>() {
+                @Override
+                public int compare(Card o1, Card o2) {
+                    return o1.getTrumpCard() - o2.getTrumpCard();
+                }
+            });
         }
     }
 
