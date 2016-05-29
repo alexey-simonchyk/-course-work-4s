@@ -19,9 +19,16 @@ public class Deck {
 
     public ArrayList<Card> getCards(int number) {
         ArrayList<Card> temp = new ArrayList<>();
-        for (int i = 0; i < number; i++) {
-            temp.add(cards.get(cards.size() - 1));
-            cards.remove(cards.size() - 1);
+        if (number > cards.size()) {
+            number = cards.size();
+        }
+        if (number > 0) {
+            for (int i = 0; i < number; i++) {
+                temp.add(cards.get(cards.size() - 1));
+                cards.remove(cards.size() - 1);
+            }
+        } else {
+            return null;
         }
         return temp;
     }

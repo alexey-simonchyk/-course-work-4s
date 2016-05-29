@@ -36,10 +36,10 @@ public class Controller {
     }
 
     public void playerWait() {
-        server.startGame();
+        server.startGame(client.getPlayer());
         client.getPlayer().setId((byte)0);
         server.getGame().addPlayer(client.getPlayer());
-        client.setGame(server.getGame());
+        client.setGame(server.getGame(), client.getPlayer());
         client.getPlayer().setQueueMove(Math.round(Math.random()) == 1);
         server.waitPlayers(client.getPlayer().getName(), client.getPlayer().getQueueMove());
         client.getPlayer().update(server.getDeck().getCards(6));
@@ -70,15 +70,35 @@ public class Controller {
         }
     }
 
+    public void controlButtonPressed(boolean isPass) {
+        if (client.getPlayer().getQueueMove() && client.getGame().getCardsOnTable().size() > 0) {
+            if (( !client.getGame().needReturnMove() && isPass) || (client.getGame().needReturnMove() && !isPass)) {
+                client.getPlayer().setQueueMove(false);
+                if (isServer) {
+                    server.sendCommand(isPass);
+                    updateView();
+                } else {
+                    client.sendCommand(isPass);
+                    updateView();
+                }
+            }
+        }
+    }
+
+    public void buttonSendMessagePressed() {
+
+    }
+
     public void move(Card card) {
         if (client.getPlayer().getQueueMove() && card != null) {
             if (client.getGame().needReturnMove()) { // ОТВЕТНЫЙ ХОД
                 if (client.checkReturnMove(client.getGame().getLastTableCard(), card, client.getGame().getTrump())) {
+                    client.getPlayer().setQueueMove(false);
                     if (isServer) {
-                        server.update(card, client.getPlayer().getId());
+                        server.getGame().updateTable(card);
                         client.getPlayer().removeCard(card);
                         updateView();
-                        server.sendUpdate(card, client.getPlayer().getId());
+                        server.sendUpdate(card);
                     } else {
                         client.getPlayer().removeCard(card);
                         client.getGame().updateTable(card);
@@ -88,11 +108,12 @@ public class Controller {
                 }
             } else {
                 if (client.getGame().checkMove(card.getValue())) { // ОБЫЧНЫЙ ХОД
+                    client.getPlayer().setQueueMove(false);
                     if (isServer) {
-                        server.update(card, client.getPlayer().getId());
+                        server.getGame().updateTable(card);
                         client.getPlayer().removeCard(card);
                         updateView();
-                        server.sendUpdate(card, client.getPlayer().getId());
+                        server.sendUpdate(card);
                     } else {
                         client.getPlayer().removeCard(card);
                         client.getGame().updateTable(card);

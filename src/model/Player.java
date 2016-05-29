@@ -36,12 +36,16 @@ public class Player extends ServerPlayer {
         }
     }
 
+    @Override
+    public int getNumberCards() { return cards.size(); }
+
     public void removeCard(Card card) {
         int counter = 0;
         for (Card temp: cards) {
             if (card.getSuit() == temp.getSuit() &&
                     card.getValue() == temp.getValue()) {
                 cards.remove(counter);
+                setNumberCards(getNumberCards() - 1);
                 break;
             }
             counter++;
@@ -55,6 +59,9 @@ public class Player extends ServerPlayer {
     }
 
     public void update(ArrayList<Card> cards) {
-        this.cards.addAll(cards);
+        if (cards != null) {
+            this.cards.addAll(cards);
+            setNumberCards(getNumberCards() + cards.size());
+        }
     }
 }

@@ -33,9 +33,6 @@ public class ServerPlayer {
         this.id = id;
     }
 
-
-//    private void setSocket(Socket socket) { this.socket = socket; }
-
     public void setNumberCards(int numberCards) { this.numberCards = numberCards; }
 
     public int getNumberCards() { return numberCards; }

@@ -56,13 +56,33 @@ class SocketServer {
         return sendData;
     }
 
-    static byte[] getArrayUpdateData(Card card, byte id) {
-        int length = 4;
+    static byte[] getSendData(byte id, byte numberCards, ArrayList<Card> cards, String command) {
+        byte commandLength = 0;
+        byte[] commandBytes = null;
+        if (!command.equals("")) {
+            commandBytes = command.getBytes();
+            commandLength = (byte)commandBytes.length;
+        }
+        byte cardsNumber = 0;
+        if (cards != null && cards.size() > 0) {
+            cardsNumber = (byte)cards.size();
+        }
+        int length = 4 + cardsNumber * 2 + commandLength;
         byte[] sendData = new byte[length];
-        sendData[0] = 1;
-        sendData[1] = id;
-        sendData[2] = (byte)card.getSuit();
-        sendData[3] = (byte)card.getValue();
+        sendData[0] = id;
+        sendData[1] = numberCards;
+        sendData[2] = (byte)(cardsNumber * 2);
+        sendData[3] = commandLength;
+        int offset = 4;
+        if (cardsNumber > 0) {
+            for (Card card : cards) {
+                sendData[offset++] = (byte)card.getSuit();
+                sendData[offset++] = (byte)card.getValue();
+            }
+        }
+        if (commandLength > 0) {
+            System.arraycopy(commandBytes, 0, sendData, offset, commandLength);
+        }
         return sendData;
     }
 

@@ -33,10 +33,6 @@ public class Game {
         return false;
     }
 
-    public void playerMove(int id) {
-        players.get(id).setNumberCards(players.get(id).getNumberCards() - 1);
-        //players.get(id).setQueueMove(false);
-    }
 
     public ArrayList<ServerPlayer> getPlayers(int id) {
         ArrayList<ServerPlayer> temp = new ArrayList<>();
@@ -70,6 +66,14 @@ public class Game {
     }
 
     public ArrayList<Card> getCardsOnTable() { return cardsOnTable; }
+
+    public int getPlayerNumberCards(int id) {
+        return players.get(id).getNumberCards();
+    }
+
+    public void setNumberCards(byte id, int number) {
+        players.get(id).setNumberCards(number);
+    }
 
     public void clearTable() {
         if (cardsOnTable.size() > 0) {

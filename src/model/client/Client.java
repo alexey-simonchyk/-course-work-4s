@@ -11,6 +11,8 @@ import java.net.Socket;
 import java.util.ArrayList;
 
 public class Client extends Thread {
+    private final String PASS_MOVE = "PASS";
+    private final String TAKE_MOVE = "TAKE";
     private volatile Player player;
     private volatile Game game;
     private volatile Controller controller;
@@ -51,19 +53,39 @@ public class Client extends Thread {
     }
 
     private boolean checkReceivedData(byte[] data) {
-        if (data[0] == 1) {
-            controller.setQueueMove(true);
-            update(new Card(data[2], data[3]) , data[1]);
+        int offset = 4;
+        game.setNumberCards(data[0], data[1]);
+        if (data[2] > 0) {
+            byte[] temp = new byte[data[2]];
+            System.arraycopy(data, offset, temp, 0, data[2]);
+            if (data[3] > 0) {
+                player.addCards(temp);
+            } else {
+                game.updateTable(new Card(data[offset], data[offset + 1]));
+                player.setQueueMove(true);
+            }
+        }
+        if (data[3] > 0) {
+            byte[] temp = new byte[data[3]];
+            offset += data[2];
+            System.arraycopy(data, offset, temp, 0, data[3]);
+            checkCommand(temp);
         }
         return true;
     }
 
-    public void update(Card card, int id) {
-        if (card != null) {
-            game.updateTable(card);
-            game.playerMove(id);
+    private void checkCommand(byte[] data) {
+        String receivedCommand = new String(data);
+        if (receivedCommand.equals(PASS_MOVE)) {
+            game.clearTable();
+            player.setQueueMove(true);
+        } else if (receivedCommand.equals(TAKE_MOVE)) {
+            game.clearTable();
+            player.setQueueMove(true);
         }
+        controller.updateView();
     }
+
 
     public boolean checkReturnMove(Card onTableCard, Card selectedCard, Card trump) {
         if (trump.getSuit() == onTableCard.getSuit()) {
@@ -110,29 +132,12 @@ public class Client extends Thread {
         return sendData;
     }
 
-    private byte[] getMoveArrayData(byte id, Card card) {
-        int length = 4;
-        byte[] sendData = new byte[length];
-        sendData[0] = 1;
-        sendData[1] = id;
-        sendData[2] = (byte)card.getSuit();
-        sendData[3] = (byte)card.getValue();
-        return sendData;
-    }
-
-    private byte[] getCommandArrayData(byte id, String command) {
-        byte[] commandArray = command.getBytes();
-        int length = 2 + commandArray.length;
-        byte[] sendData = new byte[length];
-        sendData[0] = 2;
-        sendData[1] = id;
-        System.arraycopy(commandArray, 0, sendData, 2, commandArray.length);
-        return sendData;
-    }
-
     public Game getGame() { return game; }
 
-    public void setGame(Game game) { this.game = game; }
+    public void setGame(Game game, Player player) {
+        this.game = game;
+        this.player = player;
+    }
 
     private void handleStartGame(byte[] receivedData) {
         int offset = 5;
@@ -152,9 +157,26 @@ public class Client extends Thread {
         }
     }
 
+    public void sendCommand(boolean isPass) {
+        byte[] sendData;
+        if (isPass) {
+            game.clearTable();
+            sendData = getSendData(player.getId(), (byte)player.getNumberCards(), null, PASS_MOVE);
+            sendData(sendData);
+        } else {
+            player.update(game.getCardsOnTable());
+            game.clearTable();
+            sendData = getSendData(player.getId(), (byte)player.getNumberCards(), null, TAKE_MOVE);
+            sendData(sendData);
+        }
+        player.setQueueMove(false);
+    }
+
+
     public void sendUpdate(Card card) {
-        controller.setQueueMove(false);
-        byte[] sendData = getMoveArrayData(player.getId(), card);
+        ArrayList<Card> temp = new ArrayList<>();
+        temp.add(card);
+        byte[] sendData = getSendData(player.getId(), (byte)player.getNumberCards(), temp, "");
         sendData(sendData);
     }
 
@@ -168,6 +190,36 @@ public class Client extends Thread {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private byte[] getSendData(byte id, byte numberCards, ArrayList<Card> cards, String command) {
+        byte commandLength = 0;
+        byte[] commandBytes = null;
+        if (!command.equals("")) {
+            commandBytes = command.getBytes();
+            commandLength = (byte)commandBytes.length;
+        }
+        byte cardsNumber = 0;
+        if (cards != null && cards.size() > 0) {
+            cardsNumber = (byte)cards.size();
+        }
+        int length = 4 + cardsNumber * 2 + commandLength;
+        byte[] sendData = new byte[length];
+        sendData[0] = id;
+        sendData[1] = numberCards;
+        sendData[2] = (byte)(cardsNumber * 2);
+        sendData[3] = commandLength;
+        int offset = 4;
+        if (cardsNumber > 0) {
+            for (Card card : cards) {
+                sendData[offset++] = (byte)card.getSuit();
+                sendData[offset++] = (byte)card.getValue();
+            }
+        }
+        if (commandLength > 0) {
+            System.arraycopy(commandBytes, 0, sendData, offset, commandLength);
+        }
+        return sendData;
     }
 
 }

@@ -3,12 +3,18 @@ package model.server;
 import controller.Controller;
 import model.Card;
 import model.Game;
+import model.Player;
+
+import java.util.ArrayList;
 
 
 public class Server extends Thread {
+    private final String PASS_MOVE = "PASS";
+    private final String TAKE_MOVE = "TAKE";
     private Game game;
     private Deck deck;
     private Controller controller;
+    private volatile Player player;
 
     public void setIsStop() {
         SocketServer.closeSockets();
@@ -47,7 +53,8 @@ public class Server extends Thread {
 
 
 
-    public void startGame() {
+    public void startGame(Player player) {
+        this.player = player;
         game = new Game();
     }
 
@@ -68,25 +75,71 @@ public class Server extends Thread {
         }
     }
 
-    public void sendUpdate(Card card, byte id) {
+    public void sendCommand(boolean isPass) {
+        byte[] sendData;
+        if (isPass) {
+            game.clearTable();
+            player.update(deck.getCards(6 - player.getNumberCards()));
+            ArrayList<Card> temp = deck.getCards(6 - game.getPlayerNumberCards(1));
+            if (temp != null) {
+                game.setNumberCards((byte)1, game.getPlayerNumberCards(1) + temp.size());
+            }
+            sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), temp, PASS_MOVE);
+            SocketServer.sendData(sendData);
+        } else {
+            player.update(game.getCardsOnTable());
+            game.clearTable();
+            ArrayList<Card> temp = deck.getCards(6 - game.getPlayerNumberCards(1));
+            if (temp != null) {
+                game.setNumberCards((byte)1, game.getPlayerNumberCards(1) + temp.size());
+            }
+            sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), temp, TAKE_MOVE);
+            SocketServer.sendData(sendData);
+        }
         controller.setQueueMove(false);
-        byte[] sendData = SocketServer.getArrayUpdateData(card, id);
+    }
+
+
+    public void sendUpdate(Card card) {
+        ArrayList<Card> temp = new ArrayList<>();
+        temp.add(card);
+        byte[] sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), temp, "");
         SocketServer.sendData(sendData);
     }
 
     private boolean checkReceivedData(byte[] data) {
-        if (data[0] == 1) {
+        int offset = 4;
+        game.setNumberCards(data[0], data[1]);
+        if (data[2] > 0) {
+            game.updateTable(new Card(data[offset], data[offset + 1]));
             controller.setQueueMove(true);
-            update(new Card(data[2], data[3]) , data[1]);
+        }
+        if (data[3] > 0) {
+            byte[] temp = new byte[data[3]];
+            offset += data[2];
+            System.arraycopy(data, offset, temp, 0, data[3]);
+            checkCommand(temp, data[0]);
         }
         return true;
     }
 
-    public void update(Card card, int id) {
-        if (card != null) {
-            game.updateTable(card);
-            game.playerMove(id);
+    private void checkCommand(byte[] data, byte id) {
+        String receivedCommand = new String(data);
+        if (receivedCommand.equals(PASS_MOVE)) {
+            game.clearTable();
+            ArrayList<Card> temp = deck.getCards(6 - game.getPlayerNumberCards(1));
+            if (temp != null) {
+                game.setNumberCards(id, game.getPlayerNumberCards(id) + temp.size());
+            }
+            player.update(deck.getCards(6 - player.getNumberCards()));
+            byte[] sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), temp, "PLAYER");
+            SocketServer.sendData(sendData);
+        } else if (receivedCommand.equals(TAKE_MOVE)) {
+            game.setNumberCards(id, game.getCardsOnTable().size() + game.getPlayerNumberCards(id));
+            player.update(deck.getCards(6 - player.getNumberCards()));
+            game.clearTable();
         }
+        controller.setQueueMove(true);
     }
 
 

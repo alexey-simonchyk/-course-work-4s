@@ -199,6 +199,19 @@ public class Window extends Application {
         buttonSendMessage.setPrefWidth(95);
         messageArea.getChildren().addAll(messageText, buttonSendMessage);
         newControlArea.getChildren().addAll(buttonPass, buttonTake, chat, messageArea);
+        buttonPass.setOnAction(event -> new Thread(new Runnable() {
+            @Override
+            public void run() {
+                controller.controlButtonPressed(true);
+            }
+        }).start());
+        buttonTake.setOnAction(event -> new Thread(new Runnable() {
+            @Override
+            public void run() {
+                controller.controlButtonPressed(false);
+            }
+        }).start());
+        buttonSendMessage.setOnAction(event -> controller.buttonSendMessagePressed());
         return newControlArea;
     }
 
