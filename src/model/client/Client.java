@@ -52,24 +52,35 @@ public class Client extends Thread {
         }
     }
 
+    public void sendMessage(String message) {
+        byte[] sendData = getSendData(player.getId(), (byte)0, null, null, message);
+        sendData(sendData);
+    }
+
     private boolean checkReceivedData(byte[] data) {
-        int offset = 4;
-        game.setNumberCards(data[0], data[1]);
-        if (data[2] > 0) {
-            byte[] temp = new byte[data[2]];
-            System.arraycopy(data, offset, temp, 0, data[2]);
-            if (data[3] > 0) {
-                player.addCards(temp);
-            } else {
-                game.updateTable(new Card(data[offset], data[offset + 1]));
-                player.setQueueMove(true);
+        int offset = 5;
+        if (data[4] > 0) {
+            byte[] temp = new byte[data[4]];
+            System.arraycopy(data, offset, temp, 0, data[4]);
+            controller.updateChatArea(new String(temp), game.getPlayerName(data[0]));
+        } else {
+            game.setNumberCards(data[0], data[1]);
+            if (data[2] > 0) {
+                byte[] temp = new byte[data[2]];
+                System.arraycopy(data, offset, temp, 0, data[2]);
+                if (data[3] > 0) {
+                    player.addCards(temp);
+                } else {
+                    game.updateTable(new Card(data[offset], data[offset + 1]));
+                    player.setQueueMove(true);
+                }
             }
-        }
-        if (data[3] > 0) {
-            byte[] temp = new byte[data[3]];
-            offset += data[2];
-            System.arraycopy(data, offset, temp, 0, data[3]);
-            checkCommand(temp);
+            if (data[3] > 0) {
+                byte[] temp = new byte[data[3]];
+                offset += data[2];
+                System.arraycopy(data, offset, temp, 0, data[3]);
+                checkCommand(temp);
+            }
         }
         return true;
     }
@@ -161,12 +172,12 @@ public class Client extends Thread {
         byte[] sendData;
         if (isPass) {
             game.clearTable();
-            sendData = getSendData(player.getId(), (byte)player.getNumberCards(), null, PASS_MOVE);
+            sendData = getSendData(player.getId(), (byte)player.getNumberCards(), null, PASS_MOVE, null);
             sendData(sendData);
         } else {
             player.update(game.getCardsOnTable());
             game.clearTable();
-            sendData = getSendData(player.getId(), (byte)player.getNumberCards(), null, TAKE_MOVE);
+            sendData = getSendData(player.getId(), (byte)player.getNumberCards(), null, TAKE_MOVE, null);
             sendData(sendData);
         }
         player.setQueueMove(false);
@@ -176,7 +187,7 @@ public class Client extends Thread {
     public void sendUpdate(Card card) {
         ArrayList<Card> temp = new ArrayList<>();
         temp.add(card);
-        byte[] sendData = getSendData(player.getId(), (byte)player.getNumberCards(), temp, "");
+        byte[] sendData = getSendData(player.getId(), (byte)player.getNumberCards(), temp, null, null);
         sendData(sendData);
     }
 
@@ -192,10 +203,16 @@ public class Client extends Thread {
         }
     }
 
-    private byte[] getSendData(byte id, byte numberCards, ArrayList<Card> cards, String command) {
+    private byte[] getSendData(byte id, byte numberCards, ArrayList<Card> cards, String command, String message) {
+        int messageLength = 0;
+        byte[] messageBytes = null;
+        if (message != null) {
+            messageBytes = message.getBytes();
+            messageLength = messageBytes.length;
+        }
         byte commandLength = 0;
         byte[] commandBytes = null;
-        if (!command.equals("")) {
+        if (command != null) {
             commandBytes = command.getBytes();
             commandLength = (byte)commandBytes.length;
         }
@@ -203,13 +220,14 @@ public class Client extends Thread {
         if (cards != null && cards.size() > 0) {
             cardsNumber = (byte)cards.size();
         }
-        int length = 4 + cardsNumber * 2 + commandLength;
+        int length = 5 + cardsNumber * 2 + commandLength + messageLength;
         byte[] sendData = new byte[length];
         sendData[0] = id;
         sendData[1] = numberCards;
         sendData[2] = (byte)(cardsNumber * 2);
         sendData[3] = commandLength;
-        int offset = 4;
+        sendData[4] = (byte)messageLength;
+        int offset = 5;
         if (cardsNumber > 0) {
             for (Card card : cards) {
                 sendData[offset++] = (byte)card.getSuit();
@@ -218,6 +236,10 @@ public class Client extends Thread {
         }
         if (commandLength > 0) {
             System.arraycopy(commandBytes, 0, sendData, offset, commandLength);
+        }
+        offset += commandLength;
+        if (messageLength > 0) {
+            System.arraycopy(messageBytes, 0, sendData, offset, messageLength);
         }
         return sendData;
     }

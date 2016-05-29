@@ -56,10 +56,16 @@ class SocketServer {
         return sendData;
     }
 
-    static byte[] getSendData(byte id, byte numberCards, ArrayList<Card> cards, String command) {
+    static byte[] getSendData(byte id, byte numberCards, ArrayList<Card> cards, String command, String message) {
+        int messageLength = 0;
+        byte[] messageBytes = null;
+        if (message != null) {
+            messageBytes = message.getBytes();
+            messageLength = messageBytes.length;
+        }
         byte commandLength = 0;
         byte[] commandBytes = null;
-        if (!command.equals("")) {
+        if (command != null) {
             commandBytes = command.getBytes();
             commandLength = (byte)commandBytes.length;
         }
@@ -67,13 +73,14 @@ class SocketServer {
         if (cards != null && cards.size() > 0) {
             cardsNumber = (byte)cards.size();
         }
-        int length = 4 + cardsNumber * 2 + commandLength;
+        int length = 5 + cardsNumber * 2 + commandLength + messageLength;
         byte[] sendData = new byte[length];
         sendData[0] = id;
         sendData[1] = numberCards;
         sendData[2] = (byte)(cardsNumber * 2);
         sendData[3] = commandLength;
-        int offset = 4;
+        sendData[4] = (byte)messageLength;
+        int offset = 5;
         if (cardsNumber > 0) {
             for (Card card : cards) {
                 sendData[offset++] = (byte)card.getSuit();
@@ -82,6 +89,10 @@ class SocketServer {
         }
         if (commandLength > 0) {
             System.arraycopy(commandBytes, 0, sendData, offset, commandLength);
+        }
+        offset += commandLength;
+        if (messageLength > 0) {
+            System.arraycopy(messageBytes, 0, sendData, offset, messageLength);
         }
         return sendData;
     }

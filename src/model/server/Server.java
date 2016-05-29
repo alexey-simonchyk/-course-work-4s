@@ -84,7 +84,7 @@ public class Server extends Thread {
             if (temp != null) {
                 game.setNumberCards((byte)1, game.getPlayerNumberCards(1) + temp.size());
             }
-            sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), temp, PASS_MOVE);
+            sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), temp, PASS_MOVE, null);
             SocketServer.sendData(sendData);
         } else {
             player.update(game.getCardsOnTable());
@@ -93,7 +93,7 @@ public class Server extends Thread {
             if (temp != null) {
                 game.setNumberCards((byte)1, game.getPlayerNumberCards(1) + temp.size());
             }
-            sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), temp, TAKE_MOVE);
+            sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), temp, TAKE_MOVE, null);
             SocketServer.sendData(sendData);
         }
         controller.setQueueMove(false);
@@ -103,22 +103,33 @@ public class Server extends Thread {
     public void sendUpdate(Card card) {
         ArrayList<Card> temp = new ArrayList<>();
         temp.add(card);
-        byte[] sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), temp, "");
+        byte[] sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), temp, null, null);
+        SocketServer.sendData(sendData);
+    }
+
+    public void sendMessage(String message) {
+        byte[] sendData = SocketServer.getSendData(player.getId(), (byte)0, null, null, message);
         SocketServer.sendData(sendData);
     }
 
     private boolean checkReceivedData(byte[] data) {
-        int offset = 4;
-        game.setNumberCards(data[0], data[1]);
-        if (data[2] > 0) {
-            game.updateTable(new Card(data[offset], data[offset + 1]));
-            controller.setQueueMove(true);
-        }
-        if (data[3] > 0) {
-            byte[] temp = new byte[data[3]];
-            offset += data[2];
-            System.arraycopy(data, offset, temp, 0, data[3]);
-            checkCommand(temp, data[0]);
+        int offset = 5;
+        if (data[4] > 0) {
+            byte[] temp = new byte[data[4]];
+            System.arraycopy(data, offset, temp, 0, data[4]);
+            controller.updateChatArea(new String(temp), game.getPlayerName(data[0]));
+        } else {
+            game.setNumberCards(data[0], data[1]);
+            if (data[2] > 0) {
+                game.updateTable(new Card(data[offset], data[offset + 1]));
+                controller.setQueueMove(true);
+            }
+            if (data[3] > 0) {
+                byte[] temp = new byte[data[3]];
+                offset += data[2];
+                System.arraycopy(data, offset, temp, 0, data[3]);
+                checkCommand(temp, data[0]);
+            }
         }
         return true;
     }
@@ -132,7 +143,7 @@ public class Server extends Thread {
                 game.setNumberCards(id, game.getPlayerNumberCards(id) + temp.size());
             }
             player.update(deck.getCards(6 - player.getNumberCards()));
-            byte[] sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), temp, "PLAYER");
+            byte[] sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), temp, "PLAYER", null);
             SocketServer.sendData(sendData);
         } else if (receivedCommand.equals(TAKE_MOVE)) {
             game.setNumberCards(id, game.getCardsOnTable().size() + game.getPlayerNumberCards(id));

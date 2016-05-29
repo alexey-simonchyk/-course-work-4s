@@ -33,6 +33,7 @@ public class Window extends Application {
     private VBox tableCards;
     private Controller controller;
     private Stage stage;
+    private TextArea chat;
 
     public Window() {
         cards = loadImage("cards.png");
@@ -90,6 +91,10 @@ public class Window extends Application {
             controller.setInMainMenu(false);
             controller.updateView();
         });
+    }
+
+    public void updateChat(String message) {
+        Platform.runLater(()-> chat.setText(chat.getText() + "\n" + message));
     }
 
 
@@ -187,7 +192,7 @@ public class Window extends Application {
         newControlArea.setAlignment(Pos.CENTER);
         Button buttonPass = getButton("Пасс");
         Button buttonTake = getButton("Взять");
-        TextArea chat = new TextArea();
+        chat = new TextArea();
         chat.setEditable(false);
         chat.setPrefWidth(250);
         chat.setPrefHeight(400);
@@ -211,7 +216,13 @@ public class Window extends Application {
                 controller.controlButtonPressed(false);
             }
         }).start());
-        buttonSendMessage.setOnAction(event -> controller.buttonSendMessagePressed());
+        buttonSendMessage.setOnAction(event->new Thread(new Runnable() {
+            @Override
+            public void run() {
+                controller.buttonSendMessagePressed(messageText.getText());
+                Platform.runLater(()->messageText.setText(""));
+            }
+        }).start());
         return newControlArea;
     }
 

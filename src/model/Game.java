@@ -71,6 +71,8 @@ public class Game {
         return players.get(id).getNumberCards();
     }
 
+    public String getPlayerName(byte id) { return players.get(id).getName(); }
+
     public void setNumberCards(byte id, int number) {
         players.get(id).setNumberCards(number);
     }

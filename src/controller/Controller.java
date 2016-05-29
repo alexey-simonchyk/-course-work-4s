@@ -24,6 +24,10 @@ public class Controller {
         client.start();
     }
 
+    public void updateChatArea(String message, String name) {
+        window.updateChat(name + " : " + message);
+    }
+
     public void setIsServer(boolean isServer) {
         if (isServer) {
             client = new Client("Server");
@@ -85,8 +89,15 @@ public class Controller {
         }
     }
 
-    public void buttonSendMessagePressed() {
-
+    public void buttonSendMessagePressed(String message) {
+        if (message != null && !message.equals(""))
+            if (isServer) {
+                server.sendMessage(message);
+                window.updateChat(client.getPlayer().getName() + " : " + message);
+            } else {
+                client.sendMessage(message);
+                window.updateChat(client.getPlayer().getName() + " : " + message);
+            }
     }
 
     public void move(Card card) {
