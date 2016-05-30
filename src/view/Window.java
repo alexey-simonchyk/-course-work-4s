@@ -127,6 +127,11 @@ public class Window extends Application {
                 setServerScene();
         });
 
+        exitButton.setOnAction(event -> {
+            controller.stopThreads();
+            stage.close();
+        });
+
         connectButton.setOnAction(event-> setClientScene());
 
         stage.setScene(scene);

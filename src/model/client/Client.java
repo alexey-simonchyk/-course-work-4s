@@ -18,7 +18,9 @@ public class Client extends Thread {
     private volatile Controller controller;
 
     public void setIsStop() {
-        this.stop();
+        if (this.isAlive()) {
+            this.stop();
+        }
         player.closeSocket();
     }
 

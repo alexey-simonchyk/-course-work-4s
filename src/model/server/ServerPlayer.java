@@ -9,7 +9,7 @@ public class ServerPlayer {
     private int numberCards;
     private boolean queueMove;
     protected String name;
-    protected Socket socket;
+    protected Socket socket = null;
     protected DataInputStream inputStream;
     protected DataOutputStream outputStream;
 

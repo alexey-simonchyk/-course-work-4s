@@ -76,9 +76,13 @@ public class Controller {
 
     public void stopThreads() {
         if (isServer) {
-            server.setIsStop();
+            if (server != null) {
+                server.setIsStop();
+            }
         } else {
-            client.setIsStop();
+            if (client != null) {
+                client.setIsStop();
+            }
         }
     }
 

@@ -18,13 +18,14 @@ public class Player extends ServerPlayer {
     }
 
     public void closeSocket() {
-        try {
-            inputStream.close();
-            outputStream.close();
-            socket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        if (socket != null)
+            try {
+                inputStream.close();
+                outputStream.close();
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
     }
 
     public ArrayList<Card> getCards() { return cards; }

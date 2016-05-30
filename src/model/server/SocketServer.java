@@ -12,7 +12,7 @@ import java.util.ArrayList;
 
 class SocketServer {
     private static volatile ServerSocket socket;
-    private static volatile Socket playerSocket;
+    private static volatile Socket playerSocket = null;
     private static DataInputStream inputStream;
     private static DataOutputStream outputStream;
 
@@ -98,14 +98,15 @@ class SocketServer {
     }
 
     static void closeSockets() {
-        try {
-            inputStream.close();
-            outputStream.close();
-            playerSocket.close();
-            socket.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        if (playerSocket != null)
+            try {
+                inputStream.close();
+                outputStream.close();
+                playerSocket.close();
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
     }
 
     static Socket getPlayerSocket() { return playerSocket; }

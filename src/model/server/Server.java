@@ -17,7 +17,9 @@ public class Server extends Thread {
     private volatile Player player;
 
     public void setIsStop() {
-        this.stop();
+        if (this.isAlive()) {
+            this.stop();
+        }
         SocketServer.closeSockets();
     }
 
