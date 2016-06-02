@@ -9,13 +9,15 @@ public class Deck {
     private ArrayList<Card> cards;
     public Deck() {
         cards = new ArrayList<>();
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 13; j++) {
+        for (int i = 0; i < 1/*4*/; i++) {
+            for (int j = 0; j < 8/*13*/; j++) {
                 cards.add(new Card(i, j));
             }
         }
         Collections.shuffle(cards);
     }
+
+    int getNumberCards() { return cards.size(); }
 
     public ArrayList<Card> getCards(int number) {
         ArrayList<Card> temp = new ArrayList<>();
@@ -33,6 +35,7 @@ public class Deck {
         }
         return temp;
     }
+
 
     public Card getTrump () {
         return cards.get(0);

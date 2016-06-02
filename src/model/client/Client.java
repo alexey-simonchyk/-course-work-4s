@@ -13,6 +13,9 @@ import java.util.ArrayList;
 public class Client extends Thread {
     private final String PASS_MOVE = "PASS";
     private final String TAKE_MOVE = "TAKE";
+    private final String END_GAME_WIN = "WIN";
+    private final String END_GAME_LOSE = "LOSE";
+    private final String END_GAME_NO_WIN = "NO_WIN";
     private volatile Player player;
     private volatile Game game;
     private volatile Controller controller;
@@ -39,7 +42,7 @@ public class Client extends Thread {
 
     @Override
     public void run() {
-        while (true) {
+        while (!game.getEnd()) {
             byte[] dataReceived = receiveData();
             if (dataReceived != null) {
                 new Thread(new Runnable() {
@@ -89,12 +92,27 @@ public class Client extends Thread {
 
     private void checkCommand(byte[] data) {
         String receivedCommand = new String(data);
-        if (receivedCommand.equals(PASS_MOVE)) {
-            game.clearTable();
-            player.setQueueMove(true);
-        } else if (receivedCommand.equals(TAKE_MOVE)) {
-            game.clearTable();
-            player.setQueueMove(true);
+        switch (receivedCommand) {
+            case PASS_MOVE:
+                game.clearTable();
+                player.setQueueMove(true);
+                break;
+            case TAKE_MOVE:
+                game.clearTable();
+                player.setQueueMove(true);
+                break;
+            case END_GAME_LOSE:
+                controller.updateChatArea("Вы выиграли!!!");
+                game.setEnd(true);
+                break;
+            case END_GAME_WIN:
+                controller.updateChatArea("Выиграл ваш противник....");
+                game.setEnd(true);
+                break;
+            case END_GAME_NO_WIN:
+                controller.updateChatArea("Ничья");
+                game.setEnd(true);
+                break;
         }
         controller.updateView();
     }

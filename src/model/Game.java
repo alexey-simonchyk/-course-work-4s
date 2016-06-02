@@ -9,12 +9,18 @@ public class Game {
     private ArrayList<Card> cardsOnTable; // колода
     private Card trump;
     private ArrayList<ServerPlayer> players;
+    private boolean isEnd;
 
 
     public Game() {
+        isEnd = false;
         this.cardsOnTable = new ArrayList<>();
         players = new ArrayList<>();
     }
+
+    public boolean getEnd() { return isEnd; }
+
+    public void setEnd(boolean isEnd) { this.isEnd = isEnd; }
 
     public void addPlayer(ServerPlayer player) {
         players.add(player);

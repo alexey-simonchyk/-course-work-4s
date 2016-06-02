@@ -30,7 +30,7 @@ public class Controller {
         window.updateChat(name + " : " + message);
     }
 
-    private void updateChatArea(String message) {
+    public void updateChatArea(String message) {
         window.updateChat(message);
     }
 
@@ -113,7 +113,7 @@ public class Controller {
     }
 
     public void move(Card card) {
-        if (client.getPlayer().getQueueMove() && card != null) {
+        if (client.getPlayer().getQueueMove() && card != null && !client.getGame().getEnd()) {
             if (client.getGame().needReturnMove()) { // ОТВЕТНЫЙ ХОД
                 if (client.checkReturnMove(client.getGame().getLastTableCard(), card, client.getGame().getTrump())) {
                     client.getPlayer().setQueueMove(false);

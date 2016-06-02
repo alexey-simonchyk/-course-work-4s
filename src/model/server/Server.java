@@ -11,6 +11,9 @@ import java.util.ArrayList;
 public class Server extends Thread {
     private final String PASS_MOVE = "PASS";
     private final String TAKE_MOVE = "TAKE";
+    private final String END_GAME_WIN = "WIN";
+    private final String END_GAME_LOSE = "LOSE";
+    private final String END_GAME_NO_WIN = "NO_WIN";
     private Game game;
     private Deck deck;
     private Controller controller;
@@ -63,7 +66,7 @@ public class Server extends Thread {
 
     @Override
     public void run() {
-        while (true) {
+        while (!game.getEnd()) {
             byte[] dataReceived = SocketServer.receiveData();
             if (dataReceived != null) {
                 new Thread(new Runnable() {
@@ -78,9 +81,31 @@ public class Server extends Thread {
         }
     }
 
+    private boolean checkEnd() {
+        byte[] sendData;
+        if ((game.getPlayerNumberCards(0) == 0 || game.getPlayerNumberCards(1) == 0 )
+                && deck.getNumberCards() == 0) {
+            if (game.getPlayerNumberCards(0) == 0 && game.getPlayerNumberCards(1) == 0) {
+                sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), null, END_GAME_NO_WIN, null);
+                controller.updateChatArea("Ничья");
+            } else if (game.getPlayerNumberCards(player.getId()) == 0) {
+                sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), null, END_GAME_WIN, null);
+                controller.updateChatArea("Вы Выиграли!!!");
+            } else {
+                sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), null, END_GAME_LOSE, null);
+                controller.updateChatArea("Вы проиграли...");
+            }
+            game.setEnd(true);
+            SocketServer.sendData(sendData);
+            return true;
+        }
+        return false;
+    }
+
     public void sendCommand(boolean isPass) {
         byte[] sendData;
-        if (isPass) {
+        if (!checkEnd())
+            if (isPass) {
             game.clearTable();
             player.update(deck.getCards(6 - player.getNumberCards()));
             ArrayList<Card> temp = deck.getCards(6 - game.getPlayerNumberCards(1));
@@ -106,7 +131,7 @@ public class Server extends Thread {
     public void sendUpdate(Card card) {
         ArrayList<Card> temp = new ArrayList<>();
         temp.add(card);
-        byte[] sendData = SocketServer.getSendData(player.getId(), (byte)player.getNumberCards(), temp, null, null);
+        byte[] sendData = SocketServer.getSendData(player.getId(), (byte) player.getNumberCards(), temp, null, null);
         SocketServer.sendData(sendData);
     }
 
@@ -154,6 +179,7 @@ public class Server extends Thread {
             game.clearTable();
         }
         controller.setQueueMove(true);
+        checkEnd();
     }
 
 
