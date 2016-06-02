@@ -18,8 +18,8 @@ public class Controller {
         isInMainMenu = true;
     }
 
-    public void connectToServer(String ip, int port) {
-        client.connect(ip, port);
+    public void connectToServer(String ip) {
+        client.connect(ip);
         client.getPlayer().sortCards();
         window.startGame();
         client.start();
@@ -87,7 +87,8 @@ public class Controller {
     }
 
     public void controlButtonPressed(boolean isPass) {
-        if (client.getPlayer().getQueueMove() && client.getGame().getCardsOnTable().size() > 0) {
+        if (client.getPlayer().getQueueMove() && client.getGame().getCardsOnTable().size() > 0
+                && !client.getGame().getEnd()) {
             if (( !client.getGame().needReturnMove() && isPass) || (client.getGame().needReturnMove() && !isPass)) {
                 client.getPlayer().setQueueMove(false);
                 if (isServer) {

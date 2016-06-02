@@ -60,25 +60,21 @@ public class Window extends Application {
         Scene scene = new Scene(serverScene, 800, 600);
         Label ipLabel = new Label("Write ip server");
         TextField ipTextField = new TextField();
-        Label portLabel = new Label("Write port to connect");
-        TextField portTextField = new TextField();
-        portTextField.setText("7070");
         ipTextField.setText("127.0.0.1");
         Button buttonConnect = new Button("Connect");
-        serverScene.getChildren().addAll(ipLabel, ipTextField, portLabel, portTextField, buttonConnect);
+        serverScene.getChildren().addAll(ipLabel, ipTextField, buttonConnect);
         stage.setScene(scene);
         controller.setIsServer(false);
 
         buttonConnect.setOnAction(event -> {
             String ip = ipTextField.getText();
-            String port = portTextField.getText();
-            if (!ip.equals("") && !port.equals("")) {
+            if (!ip.equals("")) {
                 Label labelMessage = new Label("Connecting...");
                 serverScene.getChildren().add(labelMessage);
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        controller.connectToServer(ip, Integer.parseInt(port));
+                        controller.connectToServer(ip);
                     }
                 }).start();
             }

@@ -1,49 +1,16 @@
-package model.server;
+package model.client;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.ServerSocket;
 import java.net.Socket;
 
-class SocketServer {
-    private static volatile ServerSocket socket;
-    private static volatile Socket playerSocket = null;
+class SocketClient {
+    private static Socket socket = null;
     private static DataInputStream inputStream;
     private static DataOutputStream outputStream;
+    private static final int port = 7070;
 
-
-    static void setSocket() {
-        try {
-            socket = new ServerSocket(7070, 0, InetAddress.getByName("localhost"));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    static void waitPlayers() {
-        try {
-            playerSocket = socket.accept();
-            outputStream = new DataOutputStream(playerSocket.getOutputStream());
-            inputStream = new DataInputStream(playerSocket.getInputStream());
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    static void closeSockets() {
-        if (playerSocket != null)
-            try {
-                inputStream.close();
-                outputStream.close();
-                playerSocket.close();
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-    }
 
     static void sendData(byte[] sendData) {
         try {
@@ -51,6 +18,27 @@ class SocketServer {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    static void setSocket(String ip) {
+        try {
+            socket = new Socket(ip, port);
+            inputStream = new DataInputStream(socket.getInputStream());
+            outputStream = new DataOutputStream(socket.getOutputStream());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    static void closeSocket() {
+        if (socket != null)
+            try {
+                inputStream.close();
+                outputStream.close();
+                socket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
     }
 
 

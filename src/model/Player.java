@@ -2,10 +2,6 @@ package model;
 
 import model.server.ServerPlayer;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Comparator;
 
@@ -17,28 +13,7 @@ public class Player extends ServerPlayer {
         cards = new ArrayList<>();
     }
 
-    public void closeSocket() {
-        if (socket != null)
-            try {
-                inputStream.close();
-                outputStream.close();
-                socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-    }
-
     public ArrayList<Card> getCards() { return cards; }
-
-    public void setSocket(Socket socket) {
-        this.socket = socket;
-        try {
-            inputStream = new DataInputStream(this.socket.getInputStream());
-            outputStream = new DataOutputStream(this.socket.getOutputStream());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     @Override
     public int getNumberCards() { return cards.size(); }

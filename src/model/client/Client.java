@@ -2,29 +2,22 @@ package model.client;
 
 import controller.Controller;
 import model.Card;
+import model.Connection;
 import model.Game;
 import model.Player;
+import model.handle.HandleData;
 import model.server.ServerPlayer;
 
-import java.io.IOException;
-import java.net.Socket;
 import java.util.ArrayList;
 
-public class Client extends Thread {
-    private final String PASS_MOVE = "PASS";
-    private final String TAKE_MOVE = "TAKE";
-    private final String END_GAME_WIN = "WIN";
-    private final String END_GAME_LOSE = "LOSE";
-    private final String END_GAME_NO_WIN = "NO_WIN";
-    private volatile Player player;
-    private volatile Game game;
-    private volatile Controller controller;
+public class Client extends Connection {
 
+    @Override
     public void setIsStop() {
         if (this.isAlive()) {
             this.stop();
         }
-        player.closeSocket();
+        SocketClient.closeSocket();
     }
 
     public Client(String name, Controller controller) {
@@ -43,7 +36,7 @@ public class Client extends Thread {
     @Override
     public void run() {
         while (!game.getEnd()) {
-            byte[] dataReceived = receiveData();
+            byte[] dataReceived = SocketClient.receiveData();
             if (dataReceived != null) {
                 new Thread(new Runnable() {
                     @Override
@@ -57,12 +50,14 @@ public class Client extends Thread {
         }
     }
 
+    @Override
     public void sendMessage(String message) {
-        byte[] sendData = getSendData(player.getId(), (byte)0, null, null, message);
-        sendData(sendData);
+        byte[] sendData = HandleData.getSendData(player.getId(), (byte)0, null, null, message);
+        SocketClient.sendData(sendData);
     }
 
-    private boolean checkReceivedData(byte[] data) {
+    @Override
+    protected boolean checkReceivedData(byte[] data) {
         int offset = 5;
         if (data[4] > 0) {
             byte[] temp = new byte[data[4]];
@@ -121,12 +116,14 @@ public class Client extends Thread {
     public boolean checkReturnMove(Card onTableCard, Card selectedCard, Card trump) {
         if (trump.getSuit() == onTableCard.getSuit()) {
             if (trump.getSuit() == selectedCard.getSuit() &&
-                    ( onTableCard.getValue() < selectedCard.getValue() || selectedCard.getValue() == 0 )) {
+                    (( onTableCard.getValue() < selectedCard.getValue() && onTableCard.getValue() != 0)
+                            || selectedCard.getValue() == 0 )) {
                 return true;
             }
         } else if (trump.getSuit() == selectedCard.getSuit()) {
             return true;
-        } else if (( onTableCard.getValue() < selectedCard.getValue() || selectedCard.getValue() == 0 ) &&
+        } else if ((( onTableCard.getValue() < selectedCard.getValue() && onTableCard.getValue() != 0)
+                        || selectedCard.getValue() == 0 ) &&
                    onTableCard.getSuit() == selectedCard.getSuit()) {
             return true;
         }
@@ -135,33 +132,6 @@ public class Client extends Thread {
 
 
     public Player getPlayer() { return player; }
-
-    public void sendData(byte[] data) {
-        try {
-            player.getOutputStream().write(data);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private byte[] receiveData() {
-        byte[] data = new byte[1024];
-        try {
-            player.getInputStream().read(data);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return data;
-    }
-
-    private byte[] getStartArrayData(String name) {
-        byte[] nameArray = name.getBytes();
-        int length = 1 + nameArray.length;
-        byte[] sendData = new byte[length];
-        sendData[0] = 0;
-        System.arraycopy(nameArray, 0, sendData, 1, nameArray.length);
-        return sendData;
-    }
 
     public Game getGame() { return game; }
 
@@ -189,80 +159,38 @@ public class Client extends Thread {
         }
     }
 
+    @Override
     public void sendCommand(boolean isPass) {
         byte[] sendData;
         if (isPass) {
             game.clearTable();
-            sendData = getSendData(player.getId(), (byte)player.getNumberCards(), null, PASS_MOVE, null);
-            sendData(sendData);
+            sendData = HandleData.getSendData(player.getId(), (byte)player.getNumberCards(), null, PASS_MOVE, null);
+            SocketClient.sendData(sendData);
         } else {
             player.update(game.getCardsOnTable());
             game.clearTable();
-            sendData = getSendData(player.getId(), (byte)player.getNumberCards(), null, TAKE_MOVE, null);
-            sendData(sendData);
+            sendData = HandleData.getSendData(player.getId(), (byte)player.getNumberCards(), null, TAKE_MOVE, null);
+            SocketClient.sendData(sendData);
         }
         player.setQueueMove(false);
     }
 
 
+    @Override
     public void sendUpdate(Card card) {
         ArrayList<Card> temp = new ArrayList<>();
         temp.add(card);
-        byte[] sendData = getSendData(player.getId(), (byte)player.getNumberCards(), temp, null, null);
-        sendData(sendData);
+        byte[] sendData = HandleData.getSendData(player.getId(), (byte)player.getNumberCards(), temp, null, null);
+        SocketClient.sendData(sendData);
     }
 
-    public void connect(String ip, int port) {
+    public void connect(String ip) {
         game = new Game();
-        try {
-            player.setSocket(new Socket(ip, port));
-            sendData(getStartArrayData(player.getName()));
-            byte[] receiveData = receiveData();
-            handleStartGame(receiveData);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        SocketClient.setSocket(ip);
+        SocketClient.sendData(HandleData.getStartClientData(player.getName()));
+        byte[] receiveData = SocketClient.receiveData();
+        handleStartGame(receiveData);
     }
 
-    private byte[] getSendData(byte id, byte numberCards, ArrayList<Card> cards, String command, String message) {
-        int messageLength = 0;
-        byte[] messageBytes = null;
-        if (message != null) {
-            messageBytes = message.getBytes();
-            messageLength = messageBytes.length;
-        }
-        byte commandLength = 0;
-        byte[] commandBytes = null;
-        if (command != null) {
-            commandBytes = command.getBytes();
-            commandLength = (byte)commandBytes.length;
-        }
-        byte cardsNumber = 0;
-        if (cards != null && cards.size() > 0) {
-            cardsNumber = (byte)cards.size();
-        }
-        int length = 5 + cardsNumber * 2 + commandLength + messageLength;
-        byte[] sendData = new byte[length];
-        sendData[0] = id;
-        sendData[1] = numberCards;
-        sendData[2] = (byte)(cardsNumber * 2);
-        sendData[3] = commandLength;
-        sendData[4] = (byte)messageLength;
-        int offset = 5;
-        if (cardsNumber > 0) {
-            for (Card card : cards) {
-                sendData[offset++] = (byte)card.getSuit();
-                sendData[offset++] = (byte)card.getValue();
-            }
-        }
-        if (commandLength > 0) {
-            System.arraycopy(commandBytes, 0, sendData, offset, commandLength);
-        }
-        offset += commandLength;
-        if (messageLength > 0) {
-            System.arraycopy(messageBytes, 0, sendData, offset, messageLength);
-        }
-        return sendData;
-    }
 
 }
